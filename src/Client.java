@@ -1,83 +1,76 @@
-import java.net.*;
-import java.util.Scanner;
-import java.io.*;
-class Client {
-	Scanner s;
-	String hostname, port, username;
-	DataOutputStream out;
-	DataInputStream in;
-	ChatWindow ch;
-	Socket connection = null;
-	
-    public static void main(String[] args) {
-    	new Client();
-    }
-    
-    public Client(){
-    	s = new Scanner(System.in);
 
-        getHostName();
-        getPort();
-        getUsername();
-        connectToServer();
-        addTextToChatWindow();
-    }
-    
-    public void send(String s){
-    	try {
-			out.writeUTF(username+": "+s);
-			out.flush();
-    		if(s.equals("/quit"))
-    			System.exit(0);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-    }
-    
-    public String getUserName(){    	
-    	return username;
-    }
-    
-    private void getHostName(){
-    	System.out.println("Enter hostname:");
-        hostname = s.nextLine();
-        if(hostname.isEmpty())
-        	hostname = "localhost";
-    }
-    
-    private void getPort(){
-    	System.out.println("Enter port:");
-        port = s.nextLine();
-        if(port.isEmpty())
+import java.net.*;
+import java.io.*;
+
+import javax.swing.JOptionPane;
+public class Client {
+	private String host_name, port, userID;
+	private DataOutputStream out;
+	private DataInputStream in;
+	private GUI gui;
+	private Socket connection;
+	
+	public static void main(String[] args) {
+		new Client();
+	}
+
+	public Client(){
+		getInitialInformationFromUser();
+		createDefaultHostName();
+		createDefaultPort();
+		
+		connection = null;
+		connectToServer();
+		gui = new GUI(this);
+		
+		createDataStreamConnection();
+	}
+	
+	private void getInitialInformationFromUser(){
+		host_name = JOptionPane.showInputDialog("Enter host_name:");
+		port = JOptionPane.showInputDialog("Enter port:");
+		userID = JOptionPane.showInputDialog("Enter user name:");
+	}
+	
+	private void createDefaultHostName(){
+		if(host_name.isEmpty())
+			host_name = "localhost";
+	}
+	
+	private void createDefaultPort(){
+		if(port.isEmpty())
 			port = "8888";
-    }
-    
-    private void getUsername(){
-        System.out.println("Enter username:");
-        username = s.nextLine();
-    }
-    
-    private void connectToServer(){
-        try {
-            connection = new Socket(hostname, Integer.parseInt(port));
-            System.out.println("connected to "+hostname+" on port "+port+" as "+username);
-        } catch (IOException ioe) {
-            System.err.println("Connection failed");
-        }
-    }
-    
-    private void addTextToChatWindow(){
-    	ch = new ChatWindow(this);
-        try {
-        	out = new DataOutputStream(new BufferedOutputStream(connection.getOutputStream()));
-        	in = new DataInputStream(new BufferedInputStream(connection.getInputStream()));
-        	out.writeUTF("user "+username+" connected");
-        	out.flush();
-        	while(true){
-        		String input = in.readUTF();
-        		ch.addText(input);
-        	}
-        } catch (IOException ioe1) {}
-    }
-    
+	}
+	
+	private void connectToServer(){
+		try{
+			connection = new Socket(host_name, Integer.parseInt(port));
+		}catch(Exception e){
+			System.err.println("Connection Failed");
+			return;
+		}
+	}
+	
+	private void createDataStreamConnection(){
+		try{
+			out = new DataOutputStream(new BufferedOutputStream(connection.getOutputStream()));
+			in = new DataInputStream(new BufferedInputStream(connection.getInputStream()));
+			out.writeUTF(userID + " connected");
+			out.flush();
+			
+			while(true){
+				String message = in.readUTF();
+				gui.newInput(message);
+			}
+		}catch(Exception e){}
+	}
+	
+	public void sendMessage(String message){
+		try{
+			out.writeUTF(userID + ": " + message);
+			out.flush();
+			if(message.equals("/quit"))
+				System.exit(0);
+		}catch(Exception e){}
+	}
 }
